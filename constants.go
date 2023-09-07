@@ -1,6 +1,6 @@
 package main
 
 const (
-	ServiceName = "AsliService"
+	ServiceName = "Go_Service"
 	Env         = "testing"
 )

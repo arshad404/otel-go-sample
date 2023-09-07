@@ -13,7 +13,7 @@ func newExporter(w io.Writer) (trace.SpanExporter, error) {
 		stdouttrace.WithWriter(w),
 		// Use human readable output.
 		stdouttrace.WithPrettyPrint(),
-		// Do not print timestamps for the demo.
+		// Do not print timestamps for the demo
 		stdouttrace.WithoutTimestamps(),
 	)
 }

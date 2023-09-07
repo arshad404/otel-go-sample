@@ -11,7 +11,7 @@ import (
 // jaegarTracerProvider returns an OpenTelemetry TracerProvider configured to use
 // the Jaeger exporter that will send spans to the provided url. The returned
 // TracerProvider will also use a Resource configured with all the information
-// about the application.
+// about the application
 func jaegarTracerProvider() (*trace.TracerProvider, error) {
 	url := "http://localhost:14268/api/traces"
 	// Create the Jaeger exporter

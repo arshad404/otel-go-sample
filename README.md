@@ -23,4 +23,4 @@ Step-4: Hit the curl
 http://localhost:8080/albums
 ```
 
-Step-5: Open the jaegar, select the service AsliService and click Find traces
+Step-5: Open the jaegar, select the service Go_Service and click Find traces
