@@ -1,21 +1,23 @@
-version: '3'
-services:
-  jaeger:
-    image: jaegertracing/all-in-one
-    ports:
-      - "16686:16686" # Jaeger UI port
-      - "14250"
-    environment:
-      - COLLECTOR_ZIPKIN_HTTP_PORT=9411 # Port for Zipkin-compatible endpoint
-      - COLLECTOR_TEXT_MAP_PROPAGATOR=http
-      - COLLECTOR_INTEGRATIONS=jaeger
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
 
+services:
   otel-collector:
-    image: otel/opentelemetry-collector:latest
-    ports:
-#      - "4317:4317" #  OTLP gRPC port
-      - "4318:4318" # HTTP port
-      - "55680:55680" # Metrics port
+    image: otel/opentelemetry-collector-contrib:0.91.0
     volumes:
-      - ./collector-gateway.yaml:/etc/collector-gateway.yaml
-    command: ["--config", "/etc/collector-gateway.yaml"]
+      - ./otel-collector.yaml:/etc/otel-collector.yaml
+    command: ["--config", "/etc/otel-collector.yaml"]
+    ports:
+      - 4317:4317
+
+  prometheus:
+    image: prom/prometheus:v2.45.2
+    volumes:
+      - ./prometheus.yaml:/etc/prometheus/prometheus.yml
+    ports:
+      - 9090:9090
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    ports:
+      - 16686:16686
