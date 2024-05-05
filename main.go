@@ -1,76 +1,58 @@
 // Copyright The OpenTelemetry Authors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the  License.
+// SPDX-License-Identifier: Apache-2.0
 
+// Example using OTLP exporters + collector + third-party backends. For
+// information about using the exporter, see:
+// https://pkg.go.dev/go.opentelemetry.io/otel/exporters/otlp?tab=doc#example-package-Insecure
 package main
 
 import (
 	"context"
+	"fmt"
 	"log"
-	"os"
-	"os/signal"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	"go.opentelemetry.io/otel/trace"
 )
 
-// newResource returns a resource describing this application.
-func newResource() *resource.Resource {
-	r, _ := resource.Merge(
-		resource.Default(),
-		resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.ServiceName("AsliService"),
-			semconv.ServiceVersion("v0.1.0"),
-			attribute.String("environment", "dev"),
-		),
-	)
-	return r
-}
+func dataJob(ctx context.Context) {
+	log.Printf("Waiting for connection...")
 
-func main() {
-	l := log.New(os.Stdout, "", 0)
-
-	// Write telemetry data to a file.
-	f, err := os.Create("traces.txt")
+	shutdown, err := initProvider("data-job")
 	if err != nil {
-		l.Fatal(err)
+		log.Fatal(err)
 	}
-	defer f.Close()
-
-	// tp, _ := jaegarTracerProvider()
-	// tp, _ := localTraceProvider(f)
-	tp, _ := collectorExporter()
-
 	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			l.Fatal(err)
+		if err := shutdown(ctx); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
 		}
 	}()
-	otel.SetTracerProvider(tp)
 
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, os.Interrupt)
+	tracer := otel.Tracer("data-job")
 
-	go func() {
-		go ginrun()
-	}()
-
-	select {
-	case <-sigCh:
-		l.Println("\ngoodbye")
-		return
+	// Attributes represent additional key-value descriptors that can be bound
+	// to a metric observer or recorder.
+	commonAttrs := []attribute.KeyValue{
+		attribute.String("attrA", "chocolate"),
+		attribute.String("attrB", "raspberry"),
+		attribute.String("attrC", "vanilla"),
 	}
+
+	// work begins
+	ctx, span := tracer.Start(
+		ctx,
+		"CollectorExporter-Example",
+		trace.WithAttributes(commonAttrs...))
+	defer span.End()
+	for i := 0; i < 10; i++ {
+		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
+		log.Printf("Doing really hard work (%d / 10)\n", i+1)
+
+		<-time.After(time.Second)
+		iSpan.End()
+	}
+
+	log.Printf("Done!")
 }

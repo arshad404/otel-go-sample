@@ -4,7 +4,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +35,20 @@ var albums = []album{
 	{ID: "3", Title: "Sarah Vaughan and Clifford Brown", Artist: "Sarah Vaughan", Price: 39.99},
 }
 
-func ginrun() {
+func main() {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+
+	shutdown, err := initProvider(serviceName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer func() {
+		if err := shutdown(ctx); err != nil {
+			log.Fatal("failed to shutdown TracerProvider: %w", err)
+		}
+	}()
+
 	router := gin.Default()
 	router.GET("/albums", getAlbums)
 	router.GET("/albums/:id", getAlbumByID)
@@ -77,7 +93,8 @@ func getAlbums(c *gin.Context) {
 // getAlbumByID locates the album whose ID value matches the id
 // parameter sent by the client, then returns that album as a response.
 func getAlbumByID(c *gin.Context) {
-	_, span := otel.Tracer(serviceName).Start(c.Request.Context(), "getAlbumByID", trace.WithAttributes(
+	ctx := c.Request.Context()
+	ctx, span := otel.Tracer(serviceName).Start(ctx, "getAlbumByID", trace.WithAttributes(
 		attribute.String("key", "value"),
 		attribute.Bool("case", true),
 	))
@@ -86,9 +103,11 @@ func getAlbumByID(c *gin.Context) {
 	id := c.Param("id")
 	span.SetAttributes(attribute.String("id", id))
 
-	span.AddEvent("Event-AsliConf",
+	span.AddEvent("Event-Test",
 		trace.WithTimestamp(time.Now()),
-		trace.WithAttributes(attribute.String("AsliConf", "AsliHaiAsliHai")))
+		trace.WithAttributes(attribute.String("Test-Attribute", "Test-Value")))
+
+	dataJob(ctx)
 
 	// Loop through the list of albums, looking for
 	// an album whose ID value matches the parameter.
